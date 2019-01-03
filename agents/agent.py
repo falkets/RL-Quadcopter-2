@@ -28,10 +28,17 @@ class DDPG():
         self.critic_target.model.set_weights(self.critic_local.model.get_weights())
         self.actor_target.model.set_weights(self.actor_local.model.get_weights())
 
+        # Agent Parameters
+        self.score = None
+        self.best_score = -np.inf
+        self.step_count = 0
+        self.total_reward = 0.0
+
+
         # Noise process
         self.exploration_mu = 0
         self.exploration_theta = 0.15
-        self.exploration_sigma = 0.2
+        self.exploration_sigma = 0.01
         self.noise = OUNoise(self.action_size, self.exploration_mu, self.exploration_theta, self.exploration_sigma)
 
         # Replay memory
@@ -40,11 +47,13 @@ class DDPG():
         self.memory = ReplayBuffer(self.buffer_size, self.batch_size)
 
         # Algorithm parameters
-        self.gamma = 0.99  # discount factor
-        self.tau = 0.01  # for soft update of target parameters
+        self.gamma = 0.93  # discount factor
+        self.tau = 0.08  # for soft update of target parameters
 
     def reset_episode(self):
         self.noise.reset()
+        self.total_reward = 0.0
+        self.step_count = 0
         state = self.task.reset()
         self.last_state = state
         return state
@@ -52,6 +61,13 @@ class DDPG():
     def step(self, action, reward, next_state, done):
          # Save experience / reward
         self.memory.add(self.last_state, action, reward, next_state, done)
+        self.step_count += 1
+        self.total_reward += reward
+
+        if done:
+            self.score = self.total_reward/self.step_count
+            if self.score > self.best_score:
+                self.best_score = self.score
 
         # Learn, if enough samples are available in memory
         if len(self.memory) > self.batch_size:
