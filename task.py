@@ -28,8 +28,16 @@ class Task():
 
     def get_reward(self):
         """Uses current pose of sim to return reward."""
-        reward = 1.-.3*(abs(self.sim.pose[:3] - self.target_pos)).sum()
-        return reward
+        # base_reward = 1.-np.tanh(.3*(abs(self.sim.pose[:3] - self.target_pos)).sum())
+        
+        distance = self.sim.pose[:3] - self.target_pos
+        base_reward = 1.-np.tanh(.3*(abs(distance)).sum())      
+        #  penalty considering the euler angles, we want the fly to be stable
+        penalty = abs(self.sim.pose[3:6]).sum()
+        if distance < 3  and self.sim.find_body_velocity() > 5:
+            penalty += 10
+        
+        return base_reward - penalty * 0.02
 
     def step(self, rotor_speeds):
         """Uses action to obtain next state, reward, done."""
@@ -39,6 +47,10 @@ class Task():
             done = self.sim.next_timestep(rotor_speeds) # update the sim pose and velocities
             reward += self.get_reward() 
             pose_all.append(self.sim.pose)
+        
+        if done and self.sim.time < self.sim.runtime:
+            reward = -1
+
         next_state = np.concatenate(pose_all)
         return next_state, reward, done
 

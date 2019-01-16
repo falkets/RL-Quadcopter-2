@@ -65,7 +65,7 @@ class DDPG():
         self.total_reward += reward
 
         if done:
-            self.score = self.total_reward/self.step_count
+            self.score = self.total_reward
             if self.score > self.best_score:
                 self.best_score = self.score
 
